@@ -75,33 +75,20 @@ class JPG_IMAGE_DECODER:
         huff_length -= 2
         self.idx += 2
         
-        while quant_length > 0:
+        while huff_length > 0:
             table_info, = struct.unpack(">B", self.jpeg_file[self.idx : self.idx+1])
-            precision = table_info & 0xf0
-            destination = table_info & 0x0f
-            quant_length -= 1
+            ht_type = table_info & 0xf0
+            ht_class = table_info & 0x0f
+            
+            huff_length -= 1
             self.idx += 1
             
             #print("table_info: ", bytes(table_info))
-            #print("precision: ", precision)
-            #print("destination: ", destination)
+            #print("ht type: ", ht_type)
+            #print("ht class: ", ht_class)
             
-            quant_table = np.zeros(64)
+            huff_table = np.zeros(64)
             
-            for qt_idx in range(64):
-                if precision == 0:
-                    quant_table[JPG_IMAGE_DECODER.zig_zag[qt_idx]], = struct.unpack(">B", self.jpeg_file[self.idx : self.idx+1])
-                    self.idx += 1
-                    quant_length -= 1
-                    ...
-                elif precision == 1: # Only ever using baseline DCT
-                    quant_table[JPG_IMAGE_DECODER.zig_zag[qt_idx]], = struct.unpack(">H", self.jpeg_file[self.idx : self.idx+2])
-                    self.idx += 2
-                    quant_length -= 2
-                    ...
-            quant_table = quant_table.reshape((8, 8))
-            self.quant_tables[destination] = quant_table
-            # print(quant_table)
         
         ...
 

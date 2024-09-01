@@ -1,3 +1,19 @@
+'''
+Implementation of the Discrete Cosine Transformation. The DCT is a transformation on periodic functions that singles out the major
+frequencies composing the function.
+
+The DCT is based on a variation of the Fourier Series:
+        f: [0, P] -> R
+        f(x) = sum n=0 to n=inf (C_n * cos(2pi * nx/P))
+
+From this, it is simple to derive the equation for C_n, which represents how much weight should be assigned to a multiple of
+the fundamental frequency.
+
+However, this variation of the FS relies on a infinite amount of terms. In a finite set of points, the number of terms needed is:
+        N=|finite set of points|
+
+The function f can be written as the dot product of the coefficients and the cosine function. On a finite 
+'''
 import numpy as np
 
 def dct(number_list):

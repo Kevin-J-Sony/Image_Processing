@@ -29,7 +29,20 @@ class Node:
             self.left.add_new_nodes(i - 1)
             self.right.add_new_nodes(i - 1)
     
+    '''
+    Return the furthest left leaf on the tree
+    '''
     def get_free_left_leaf(self):
+        if self.left is None and self.right is None and self.data is None:
+            return self
+
+        if self.left.is_tree_free():
+            return self.left.get_free_left_leaf()
+        if self.right.is_tree_free():
+            return self.right.get_free_left_leaf()
+        
+
+        '''
         # If the left child does not exist, or is occupied by a symbol, it cannot be within the left subtree
         if self.left is None or self.left.data is not None: 
             # If the right child does not exist or is occupied by a symbol, it cannot be within the right subtree
@@ -40,6 +53,23 @@ class Node:
         # Otherwise, search the left subtree
         else:
             return self.left.get_free_left_leaf()
+        '''
+
+    '''
+    Auxillary function to the get_free_left_leaf function which determines if the tree has any leaves to fill
+    '''
+    def is_tree_free(self):
+        found = False
+        if self.left is None and self.right is None and self.data is None:
+            return True
+
+        if self.left is not None:
+            found = self.left.is_tree_free()
+
+        if self.right is not None and not found:
+            found = found or self.right.is_tree_free()
+
+        return found
 
 
 class Huffman:
@@ -57,8 +87,11 @@ class Huffman:
         
 
     def generate_huffman_tree(self):
+        symbols_processed = 0
         symbol_idx = 0
         for idx in range(1, len(self.nocos)):
+            if symbols_processed >= len(self.symbols):
+                break
             self.create_new_layer(idx)
             number_of_codes = self.nocos[idx]
             for i in range(number_of_codes):
@@ -66,8 +99,7 @@ class Huffman:
                 left_most_leaf.data = self.symbols[symbol_idx]
                 symbol_idx += 1
                 print(symbol_idx)
-            ...
-        
+            symbols_processed += number_of_codes        
     
     def create_new_layer(self, i):
         self.root.add_new_nodes(i)

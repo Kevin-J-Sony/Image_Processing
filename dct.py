@@ -110,6 +110,6 @@ if __name__ == '__main__':
         [0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0],        
     ])
 
-    print(data)
+    # Should result in zero matrices
     print(np.round(jdct2(data), 4) - np.round(scipy.fft.dct(data, norm="ortho"), 4))
     print(np.round(jidct2(jdct2(data)), 4) - data)

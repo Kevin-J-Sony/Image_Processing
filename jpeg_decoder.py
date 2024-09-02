@@ -33,6 +33,7 @@ class JPG_IMAGE_DECODER:
         self.eof = False
         self.quant_tables = {}
         self.huff_tables = {}
+        self.component_to_qt_id = {}
         self.read_jpeg()
         self.decode_jpeg()
 
@@ -63,6 +64,7 @@ class JPG_IMAGE_DECODER:
             if self.jpeg_file[self.idx] == 0xff and self.jpeg_file[self.idx + 1] == 0xc0:
                 self.idx += 2
                 self.read_SOF_segment()
+                continue
                 ...
 
             # If DHT marker reached,
@@ -87,35 +89,46 @@ class JPG_IMAGE_DECODER:
         ...
     
     def read_SOF_segment(self):
+        length, precision, height, width, number_of_components = struct.unpack(">HBHHB", self.jpeg_file[self.idx : self.idx+8])
         '''
-        print('length_of_segment:   ', length_of_segment)
-        print('precision:   ', precision)
-        print('height:   ', height)
-        print('width:   ', width)
+        print("length: ", length)
+        print("precision: ", precision)
+        print("height: ", height)
+        print("width: ", width)
+        print("number: ", number_of_components)
+        print("===================")
         '''
+        self.idx += 8
         
-        # python stores in big endain format
-        l, p, h, w = struct.unpack(">HBHH", self.jpeg_file[self.idx : self.idx+7])
-        #print("{}\t{}\t{}\t{}".format(l, p, h, w))
-        #print(str(self.jpeg_file[self.idx: self.idx+7]))
-        self.idx += 7
+        for i in range(number_of_components):
+            component, coded_sampling_factor, qt_id = struct.unpack(">BBB", self.jpeg_file[self.idx : self.idx+3])
+            horizontal_sampling = (coded_sampling_factor & 0xf0) >> 4
+            vertical_sampling = coded_sampling_factor & 0x0f
+            
+            #if not (horizontal_sampling == 1 and vertical_sampling == 1):
+            #    raise Exception("Subsampling is not supported right now")
+            
+            self.component_to_qt_id[component] = qt_id
+            '''
+            print("component: ", component)
+            print("horizontal sampling factor", horizontal_sampling)
+            print("vertical sampling factor", vertical_sampling)
+            print("Quantization table ID: ", qt_id)
+
+            print("===================")
+            '''
+            self.idx += 3
 
 
     def read_huffman_table(self):
         huff_length = struct.unpack(">H", self.jpeg_file[self.idx : self.idx+2])[0]
         huff_length -= 2
         self.idx += 2
-        
-        huff_str = self.jpeg_file[self.idx : self.idx + huff_length].hex()
-        new_huff_str = ' '.join(huff_str[i: i+4] for i in range(0, len(huff_str), 4))
-        #print(new_huff_str, '\n\n')
-        
+                
         while huff_length > 0:
             table_info = struct.unpack(">B", self.jpeg_file[self.idx : self.idx+1])[0]
             ht_type = (table_info & 0xf0) >> 4
             ht_id = table_info & 0x0f
-            #print("type: ", ht_type)
-            #print("id: ", ht_id)
             
             huff_length -= 1
             self.idx += 1
@@ -129,27 +142,21 @@ class JPG_IMAGE_DECODER:
                 huff_length -= 1
                 self.idx += 1
             
-            #print(number_of_symbols)
-            str_table = ""
             symbols = np.zeros(number_of_symbols)
             # Read all the symbol
             for i in range(number_of_symbols):
-                str_table += str(struct.unpack(">B", self.jpeg_file[self.idx : self.idx+1])[0]) + " "
                 symbols[i] = struct.unpack(">B", self.jpeg_file[self.idx : self.idx+1])[0]
                 self.idx += 1
                 huff_length -= 1                
                 ...
-                
-            print(number_of_symbols_per_length)
-            print(symbols)
-            print(str_table, "\n\n")
             
             self.huff_tables[(ht_type, ht_id)] = Huffman(number_of_symbols_per_length, symbols)
             
+        '''
         for key, value in self.huff_tables.items():
             print(f"{key} : {value}")
             ...
-        ...
+        #'''
 
     def read_quantization_table(self):
         quant_length = struct.unpack(">H", self.jpeg_file[self.idx : self.idx+2])[0]
@@ -171,7 +178,7 @@ class JPG_IMAGE_DECODER:
             
             #print("table_info: ", bytes(table_info))
             #print("precision: ", precision)
-            #print("destination: ", destination)
+            print("destination: ", destination)
             
             quant_table = np.zeros(64)
             
@@ -191,9 +198,8 @@ class JPG_IMAGE_DECODER:
             # print(quant_table)
 
 
-
 def main():
-    bytestr = JPG_IMAGE_DECODER('jpeg444.jpg')
+    bytestr = JPG_IMAGE_DECODER('Lenna.jpg')
     
     # Confirm this is a jpeg file
     if bytestr.jpeg_file[0] == 0xff and bytestr.jpeg_file[1] == 0xd8:

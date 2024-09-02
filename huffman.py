@@ -1,6 +1,6 @@
 '''
 Given the number of symbols of a certain size and the symbols itself, derive the huffman tree for the symbols.
-The Huffman code stored is of canonical form, so the tree that can be generated is determined and not ambiguous.
+The Huffman code stored is of canonical form in JPEGS, so the tree that can be generated is determined and not ambiguous.
 '''
 
 class Node:

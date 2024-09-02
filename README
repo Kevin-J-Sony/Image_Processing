@@ -1,0 +1,8 @@
+This is where I try implementing image processing algorithms.
+
+The links I've used that helped me with building a JPEG decoder:
+https://koushtav.me/jpeg/tutorial/c++/decoder/2019/03/02/lets-write-a-simple-jpeg-library-part-2
+https://www.opennet.ru/docs/formats/jpeg.txt
+https://www.w3.org/Graphics/JPEG/itu-t81.pdf
+
+To be honest, this was such an overwhelming project to do again. I don't think I will be implementing all the features/specifications of JPEG. 

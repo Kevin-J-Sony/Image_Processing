@@ -20,6 +20,9 @@ class Node:
         
         return tree_str
     
+    def __repr__(self):
+        return str(self)
+    
     def add_new_nodes(self, i):
         if i == 0 and self.data is None:
             self.left = Node()
@@ -83,8 +86,12 @@ class Huffman:
         self.root.right = Node()
                 
         self.generate_huffman_tree()
-        print(self.root)
+        #self.generate_huffman_code()
+        self.state = self.root
         
+    def __str__(self):
+        huffman_tree_str = "huffman tree: " + str(self.root) + "\n"
+        return huffman_tree_str
 
     def generate_huffman_tree(self):
         symbols_processed = 0
@@ -98,7 +105,6 @@ class Huffman:
                 left_most_leaf = self.root.get_free_left_leaf()
                 left_most_leaf.data = self.symbols[symbol_idx]
                 symbol_idx += 1
-                print(symbol_idx)
             symbols_processed += number_of_codes        
     
     def create_new_layer(self, i):
@@ -111,7 +117,10 @@ class Huffman:
         
 
 if __name__ == "__main__":
-    huff = Huffman([0, 1, 5, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
-                   ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l'])
+    #huff = Huffman([0, 1, 5, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
+    #               ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l'])
+    huff2 = Huffman([0, 1, 5, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
+    print(huff2)
     #print(huff)
     ...

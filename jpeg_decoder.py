@@ -112,13 +112,15 @@ class JPG_IMAGE_DECODER:
         
         while huff_length > 0:
             table_info = struct.unpack(">B", self.jpeg_file[self.idx : self.idx+1])[0]
-            ht_type = table_info & 0xf0
+            ht_type = (table_info & 0xf0) >> 4
             ht_id = table_info & 0x0f
+            #print("type: ", ht_type)
+            #print("id: ", ht_id)
             
             huff_length -= 1
             self.idx += 1
             
-            number_of_symbols_per_length = [0]
+            number_of_symbols_per_length = []
             number_of_symbols = 0
             # Get the number of symbols per bit length
             for length_idx in range(16):
@@ -127,38 +129,26 @@ class JPG_IMAGE_DECODER:
                 huff_length -= 1
                 self.idx += 1
             
-            print(number_of_symbols)
+            #print(number_of_symbols)
             str_table = ""
             symbols = np.zeros(number_of_symbols)
             # Read all the symbol
             for i in range(number_of_symbols):
+                str_table += str(struct.unpack(">B", self.jpeg_file[self.idx : self.idx+1])[0]) + " "
                 symbols[i] = struct.unpack(">B", self.jpeg_file[self.idx : self.idx+1])[0]
                 self.idx += 1
                 huff_length -= 1                
                 ...
-            
-            # Compute the code
-            code = 0
-            symbol_idx = 0
-            for i in range(len(number_of_symbols_per_length)):
-                for j in range(number_of_symbols_per_length[i] - 1):
-                    print('({} : {})'.format(symbols[symbol_idx], code))
-                    symbol_idx += 1
-                    code += 1
-                    ...
-                code = (code + 1) << 1
-            
-            '''
-            print(number_of_symbols)
                 
-            symbols = self.jpeg_file[self.idx : self.idx + length_of_table]
-            huff_table = Huffman(number_of_symbols, symbols)
-
-            self.idx += length_of_table
-            huff_length -= length_of_table
-
-            print(length_of_table)
-            '''
+            print(number_of_symbols_per_length)
+            print(symbols)
+            print(str_table, "\n\n")
+            
+            self.huff_tables[(ht_type, ht_id)] = Huffman(number_of_symbols_per_length, symbols)
+            
+        for key, value in self.huff_tables.items():
+            print(f"{key} : {value}")
+            ...
         ...
 
     def read_quantization_table(self):

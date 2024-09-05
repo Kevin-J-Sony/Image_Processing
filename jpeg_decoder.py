@@ -75,19 +75,42 @@ class JPG_IMAGE_DECODER:
                 
             # If SOS marker reached,
             if self.jpeg_file[self.idx] == 0xff and self.jpeg_file[self.idx + 1] == 0xda:
-                ...
-            
+                self.idx += 2
+                self.read_SOS_segment()
+                continue
             
             # Some markers are ignored, such as 0xFFE0 and 0xFFE1 for JFIF and EXIF. This is
             # because JPEG does not actually require it, and specialized decoders are necessary
             # for those formats. A general decoder does not really need it.
             self.idx += 1
-            ...
             
         if not self.eof:
             raise Exception("Invalid JPG file: the EOI markers are not given")
-        ...
-    
+
+    def read_SOS_segment(self):
+        length, number_of_components = struct.unpack(">HB", self.jpeg_file[self.idx : self.idx + 3])
+        print("length: ", length)
+        print("number: ", number_of_components)
+        print("===================")
+        length -= 3
+        self.idx += 3
+
+        for i in range(number_of_components):
+            component_id, huff_tables_id = struct.unpack(">BB", self.jpeg_file[self.idx : self.idx + 2])
+            dc_huff_table = (huff_tables_id & 0xf0) >> 4
+            ac_huff_table = (huff_tables_id & 0x0f)
+            print("component id: ", component_id)
+            print("dc_huff_table: ", dc_huff_table)
+            print("ac_huff_table: ", ac_huff_table)
+            print("===================")
+            length -= 2
+            self.idx += 2
+        
+        # Skip 3 bytes
+        self.idx += 3
+        
+
+
     def read_SOF_segment(self):
         length, precision, height, width, number_of_components = struct.unpack(">HBHHB", self.jpeg_file[self.idx : self.idx+8])
         '''
@@ -97,7 +120,8 @@ class JPG_IMAGE_DECODER:
         print("width: ", width)
         print("number: ", number_of_components)
         print("===================")
-        '''
+        #'''
+        length -= 8
         self.idx += 8
         
         for i in range(number_of_components):
@@ -105,8 +129,8 @@ class JPG_IMAGE_DECODER:
             horizontal_sampling = (coded_sampling_factor & 0xf0) >> 4
             vertical_sampling = coded_sampling_factor & 0x0f
             
-            #if not (horizontal_sampling == 1 and vertical_sampling == 1):
-            #    raise Exception("Subsampling is not supported right now")
+            if not (horizontal_sampling == 1 and vertical_sampling == 1):
+                raise Exception("Subsampling is not supported right now")
             
             self.component_to_qt_id[component] = qt_id
             '''
@@ -117,8 +141,11 @@ class JPG_IMAGE_DECODER:
 
             print("===================")
             '''
+            length -= 3
             self.idx += 3
 
+        if length != 0:
+            raise Exception("The length of the SOF segment given is {} greater than expected".format(length))
 
     def read_huffman_table(self):
         huff_length = struct.unpack(">H", self.jpeg_file[self.idx : self.idx+2])[0]

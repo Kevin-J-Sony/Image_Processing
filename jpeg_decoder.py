@@ -8,6 +8,8 @@ import struct
 import numpy as np
 from dct import *
 from huffman import *
+from bitstream import *
+from component import *
 
 class JPG_IMAGE_DECODER:
     
@@ -32,8 +34,8 @@ class JPG_IMAGE_DECODER:
         self.idx = 0
         self.eof = False
         self.quant_tables = {}
-        self.huff_tables = {}
-        self.component_to_qt_id = {}
+        self.huff_tables = [{}, {}]     # 0 for DC, 1 for AC
+        self.color_components = [Component() for i in range(3)]
         self.read_jpeg()
         self.decode_jpeg()
 
@@ -86,6 +88,8 @@ class JPG_IMAGE_DECODER:
             
         if not self.eof:
             raise Exception("Invalid JPG file: the EOI markers are not given")
+        
+        # Send the bitstream to the huffman decoder
 
     def read_SOS_segment(self):
         length, number_of_components = struct.unpack(">HB", self.jpeg_file[self.idx : self.idx + 3])
@@ -103,13 +107,30 @@ class JPG_IMAGE_DECODER:
             print("dc_huff_table: ", dc_huff_table)
             print("ac_huff_table: ", ac_huff_table)
             print("===================")
+            self.color_components[component_id].ht_dc_id = dc_huff_table
+            self.color_components[component_id].ht_ac_id = ac_huff_table            
             length -= 2
             self.idx += 2
         
-        # Skip 3 bytes
-        self.idx += 3
+        #print("check 1st: ", self.jpeg_file[self.idx])
+        #print("check 2nd: ", self.jpeg_file[self.idx + 1])
+        #print("check 3rd: ", (self.jpeg_file[self.idx + 2] & 0xf0) >> 4)
+        #print("check 4th: ", (self.jpeg_file[self.idx + 3] & 0x0f))
         
+        # Since the decoder is simply reading sequential DCT jpeg files, skip 3 bytes
+        self.idx += 3
 
+        # Input all the data from the current index up to the end of image marker
+        end_idx = self.idx
+        while not (self.jpeg_file[end_idx] == 0xff and self.jpeg_file[end_idx + 1] == 0xd9):
+            end_idx += 1
+        
+        # This is the crucial part to decode. This bitstream is sent to the huffman decoder and continually sends
+        # the next bit over whenever the huffman decoder (or any decoder) requests it.
+        self.bitstream = BitStream(self.jpeg_file[self.idx : end_idx - 1])
+        
+        # Update the current index to be right before the end of image marker
+        self.idx = end_idx - 1
 
     def read_SOF_segment(self):
         length, precision, height, width, number_of_components = struct.unpack(">HBHHB", self.jpeg_file[self.idx : self.idx+8])
@@ -132,13 +153,15 @@ class JPG_IMAGE_DECODER:
             if not (horizontal_sampling == 1 and vertical_sampling == 1):
                 raise Exception("Subsampling is not supported right now")
             
-            self.component_to_qt_id[component] = qt_id
+            self.color_components[component].qt_id = qt_id
+            self.color_components[component].horizontal_sampling = horizontal_sampling
+            self.color_components[component].vertical_sampling = vertical_sampling
+            
             '''
             print("component: ", component)
             print("horizontal sampling factor", horizontal_sampling)
             print("vertical sampling factor", vertical_sampling)
             print("Quantization table ID: ", qt_id)
-
             print("===================")
             '''
             length -= 3
@@ -155,7 +178,7 @@ class JPG_IMAGE_DECODER:
         while huff_length > 0:
             table_info = struct.unpack(">B", self.jpeg_file[self.idx : self.idx+1])[0]
             ht_type = (table_info & 0xf0) >> 4
-            ht_id = table_info & 0x0f
+            ht_destination_id = table_info & 0x0f
             
             huff_length -= 1
             self.idx += 1
@@ -177,7 +200,7 @@ class JPG_IMAGE_DECODER:
                 huff_length -= 1                
                 ...
             
-            self.huff_tables[(ht_type, ht_id)] = Huffman(number_of_symbols_per_length, symbols)
+            (self.huff_tables[ht_type])[ht_destination_id] = Huffman(number_of_symbols_per_length, symbols)
             
         '''
         for key, value in self.huff_tables.items():
@@ -199,13 +222,13 @@ class JPG_IMAGE_DECODER:
         while quant_length > 0:
             table_info = struct.unpack(">B", self.jpeg_file[self.idx : self.idx+1])[0]
             precision = table_info & 0xf0
-            destination = table_info & 0x0f
+            qt_destination_id = table_info & 0x0f
             quant_length -= 1
             self.idx += 1
             
             #print("table_info: ", bytes(table_info))
             #print("precision: ", precision)
-            print("destination: ", destination)
+            #print("destination: ", qt_destination_id)
             
             quant_table = np.zeros(64)
             
@@ -221,12 +244,12 @@ class JPG_IMAGE_DECODER:
                     quant_length -= 2
                     ...
             quant_table = quant_table.reshape((8, 8))
-            self.quant_tables[destination] = quant_table
+            self.quant_tables[qt_destination_id] = quant_table
             # print(quant_table)
 
 
 def main():
-    bytestr = JPG_IMAGE_DECODER('Lenna.jpg')
+    bytestr = JPG_IMAGE_DECODER('jpeg444.jpg')
     
     # Confirm this is a jpeg file
     if bytestr.jpeg_file[0] == 0xff and bytestr.jpeg_file[1] == 0xd8:

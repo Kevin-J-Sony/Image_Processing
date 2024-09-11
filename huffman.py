@@ -2,6 +2,7 @@
 Given the number of symbols of a certain size and the symbols itself, derive the huffman tree for the symbols.
 The Huffman code stored is of canonical form in JPEGS, so the tree that can be generated is determined and not ambiguous.
 '''
+from bitstream import *
 
 class Node:
     
@@ -44,20 +45,6 @@ class Node:
         if self.right.is_tree_free():
             return self.right.get_free_left_leaf()
         
-
-        '''
-        # If the left child does not exist, or is occupied by a symbol, it cannot be within the left subtree
-        if self.left is None or self.left.data is not None: 
-            # If the right child does not exist or is occupied by a symbol, it cannot be within the right subtree
-            if self.right is None:
-                return self
-            else:
-                return self.right.get_free_left_leaf()
-        # Otherwise, search the left subtree
-        else:
-            return self.left.get_free_left_leaf()
-        '''
-
     '''
     Auxillary function to the get_free_left_leaf function which determines if the tree has any leaves to fill
     '''
@@ -105,16 +92,23 @@ class Huffman:
                 left_most_leaf = self.root.get_free_left_leaf()
                 left_most_leaf.data = self.symbols[symbol_idx]
                 symbol_idx += 1
-            symbols_processed += number_of_codes        
+            symbols_processed += number_of_codes
     
     def create_new_layer(self, i):
         self.root.add_new_nodes(i)
-        ...
     
-    def read_code(self, coded_info):
+    def get_code(self, bitstr):
+        current = self.root
         
-        ...
-        
+        while current is not None and (current.left is not None and current.right is not None):
+            bit = bitstr.get()
+            if bit == 0:
+                current = current.left
+            else:
+                current = current.right
+                
+        return current.data
+        raise Exception("Not implemented")        
 
 if __name__ == "__main__":
     #huff = Huffman([0, 1, 5, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],

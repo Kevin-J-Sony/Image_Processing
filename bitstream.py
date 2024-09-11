@@ -13,9 +13,11 @@ class BitStream:
         
     def get(self):
         if self.data[self.bit_idx // 8] == 0xff:
+            # if what follows 0xff is not 0x00, it is most likely a restart marker
             if self.data[1 + self.bit_idx // 8] != 0x00:
                 self.bit_idx += 2 * 8
         elif self.data[self.bit_idx // 8] == 0x00:
+            # if what follows 0xff is 0x00, it means that 0xff should be counted and 0x00 should be skipped.
             if self.data[-1 + self.bit_idx // 8] == 0xff:
                 self.bit_idx += 1 * 8
         

@@ -10,6 +10,7 @@ from dct import *
 from huffman import *
 from bitstream import *
 from component import *
+from mcu import *
 
 class JPG_IMAGE_DECODER:
     
@@ -89,8 +90,49 @@ class JPG_IMAGE_DECODER:
         if not self.eof:
             raise Exception("Invalid JPG file: the EOI markers are not given")
         
-        # Send the bitstream to the huffman decoder
-
+        # The blocks of the image go from left to right, top to bottom, so iterate through all the possible blocks
+        # in this order. To account for the case the pixels do not divide by 8, round upwards.
+        
+        # Not sure if I'll ever add subsampling, but if I do, this loop has to be modified
+        for huff_table in self.huff_tables[0]:
+            for key, table in huff_table.items():
+                print(table)
+        curr_dc = [0, 0, 0]
+        for y in range((self.image_height + 8 - 1) // 8):
+            for x in range((self.image_width + 8 - 1) // 8):
+                # TODO: Reset upon hitting restart interval
+                
+                '''
+                # Each block (or MCU) is associated with three channels
+                for component_id in range(3):
+                    # Read the difference using the DC huffman table
+                    diff = (self.huff_tables[0])[self.color_components[component_id].ht_dc_id].get_code(self.bitstream)
+                    curr_dc[component_id] += diff
+                    ((self.mcus[y])[x].jpeg_color[component_id])[0][0] = curr_dc[component_id]
+                    
+                    # Read the next n elements (up to 63) using the AC huffman table (F.1.2.2)
+                    flag = False
+                    idx = 0
+                    while idx < 64 and not flag:
+                        value = (self.huff_tables[1])[self.color_components[component_id].ht_ac_id].get_code(self.bitstream)
+                        if value != 0:
+                            # Get the number of zeros and that preceded it and move the index up by that amount
+                            # The number of zeros is the 4 upper bits of value
+                            n_zeros = value >> 4
+                            idx += n_zeros
+                            
+                            # The lower 4 bits gets the "category" of the AC coefficient, d 
+                            
+                            ((self.mcus[y])[x].jpeg_color[component_id])[self.zig_zag[idx] // 8][self.zig_zag[idx] % 8]
+                            
+                        else:
+                            flag = True                        
+                        idx += 1
+                    ...
+                '''
+                ...
+                
+        
     def read_SOS_segment(self):
         length, number_of_components = struct.unpack(">HB", self.jpeg_file[self.idx : self.idx + 3])
         print("length: ", length)
@@ -134,6 +176,9 @@ class JPG_IMAGE_DECODER:
 
     def read_SOF_segment(self):
         length, precision, height, width, number_of_components = struct.unpack(">HBHHB", self.jpeg_file[self.idx : self.idx+8])
+        self.image_width = width
+        self.image_height = height
+        self.mcus = [[MCU() for x in range((self.image_width + 8 - 1) // 8) ] for y in range((self.image_height + 8 - 1) // 8)]
         '''
         print("length: ", length)
         print("precision: ", precision)
@@ -210,10 +255,6 @@ class JPG_IMAGE_DECODER:
 
     def read_quantization_table(self):
         quant_length = struct.unpack(">H", self.jpeg_file[self.idx : self.idx+2])[0]
-        #quant_str = str(self.jpeg_file[self.idx : self.idx + quant_length].hex())
-        #new_quant_str = ' '.join(quant_str[i: i+4] for i in range(0, len(quant_str), 4))
-        #print(new_quant_str)
-
         quant_length -= 2
         self.idx += 2
         

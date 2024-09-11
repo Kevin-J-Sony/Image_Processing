@@ -6,3 +6,8 @@ https://www.opennet.ru/docs/formats/jpeg.txt
 https://www.w3.org/Graphics/JPEG/itu-t81.pdf
 
 To be honest, this was such an overwhelming project to do again. I don't think I will be implementing all the features/specifications of JPEG. 
+
+
+During the creation of the JPEG decoder, I stumbled upon a series of Youtube videos called "Everything you need to know about
+JPEGs", by Daniel Harding. It would have took me much longer for me to figure out everything on my own without his
+explanations on his videos.

@@ -108,8 +108,8 @@ class Huffman:
                 current = current.right
                 
         return current.data
-        raise Exception("Not implemented")        
-
+        raise Exception("Not implemented")
+    
 if __name__ == "__main__":
     #huff = Huffman([0, 1, 5, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
     #               ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l'])

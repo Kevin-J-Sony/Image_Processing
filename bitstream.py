@@ -30,6 +30,23 @@ class BitStream:
         
         return bit_of_data
     
+    
+    '''
+    This is a modified version of two's complement. As 
+    '''
+    def get_value_from_bits(self, bitlength):
+        value = 0
+        for i in range(bitlength):
+            print(value)
+            value = value << 1 + self.get()
+        
+        # If the value is less than half of 2^bitlength, then the number it represents is negative. To get this
+        # # number to be negative, subtract value by the medium number representable with "bitlength" bits, 2^(bitlength - 1)
+        if value < (1 << (bitlength - 1)):
+            value -= 1 << (bitlength - 1)
+        
+        return value
+    
     def is_done(self):
         return self.bit_idx // 8 == len(self.data)
     
@@ -55,4 +72,9 @@ if __name__ == "__main__":
             bit_str += str(bit.get())
         except Exception:
             ...
-    print(bit_str)
+    print(bit_str, '\n')
+    
+    x = 0
+    bit = BitStream(x.to_bytes(2, "big"))
+    print(bit.get_twos_complement(3))
+    

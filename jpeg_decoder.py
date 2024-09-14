@@ -94,23 +94,26 @@ class JPG_IMAGE_DECODER:
         # in this order. To account for the case the pixels do not divide by 8, round upwards.
         
         # Not sure if I'll ever add subsampling, but if I do, this loop has to be modified
-        for huff_table in self.huff_tables[0]:
-            for key, table in huff_table.items():
-                print(table)
+        for tables in self.huff_tables:
+            for key in tables:
+                print(tables[key])
         curr_dc = [0, 0, 0]
         for y in range((self.image_height + 8 - 1) // 8):
             for x in range((self.image_width + 8 - 1) // 8):
                 # TODO: Reset upon hitting restart interval
                 
-                '''
+                #'''
                 # Each block (or MCU) is associated with three channels
                 for component_id in range(3):
-                    # Read the difference using the DC huffman table
-                    diff = (self.huff_tables[0])[self.color_components[component_id].ht_dc_id].get_code(self.bitstream)
+                    # Read the "category" of the difference using the DC huffman table (the number of bits the 
+                    # DC coefficient is encoded as) and then get the next n number of bits (stored in two's complement)
+                    diff_cat = (self.huff_tables[0])[self.color_components[component_id].ht_dc_id].get_code(self.bitstream)
+                    diff_encoded = self.bitstream.get(diff_cat)
+                    diff = 
                     curr_dc[component_id] += diff
                     ((self.mcus[y])[x].jpeg_color[component_id])[0][0] = curr_dc[component_id]
                     
-                    # Read the next n elements (up to 63) using the AC huffman table (F.1.2.2)
+                    # Read the next n elements (up to 63) using the AC huffman table (figure F.13 on the )
                     flag = False
                     idx = 0
                     while idx < 64 and not flag:
@@ -121,15 +124,17 @@ class JPG_IMAGE_DECODER:
                             n_zeros = value >> 4
                             idx += n_zeros
                             
-                            # The lower 4 bits gets the "category" of the AC coefficient, d 
+                            # The lower 4 bits gets the "category" of the AC coefficient. Read the next "ac_cat" bits after
+                            # to get the huffman encoded AC coefficient
+                            ac_cat = value & 0x0f
+                            ac_encoded = self.bitstream(ac_cat)
                             
-                            ((self.mcus[y])[x].jpeg_color[component_id])[self.zig_zag[idx] // 8][self.zig_zag[idx] % 8]
-                            
+                            ((self.mcus[y])[x].jpeg_color[component_id])[self.zig_zag[idx] // 8][self.zig_zag[idx] % 8] = ac
                         else:
                             flag = True                        
                         idx += 1
                     ...
-                '''
+                #'''
                 ...
                 
         

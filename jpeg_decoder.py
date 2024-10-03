@@ -94,50 +94,102 @@ class JPG_IMAGE_DECODER:
         # in this order. To account for the case the pixels do not divide by 8, round upwards.
         
         # Not sure if I'll ever add subsampling, but if I do, this loop has to be modified
-        for tables in self.huff_tables:
-            for key in tables:
-                print(tables[key])
         curr_dc = [0, 0, 0]
         for y in range((self.image_height + 8 - 1) // 8):
             for x in range((self.image_width + 8 - 1) // 8):
                 # TODO: Reset upon hitting restart interval
                 
-                #'''
                 # Each block (or MCU) is associated with three channels
                 for component_id in range(3):
                     # Read the "category" of the difference using the DC huffman table (the number of bits the 
                     # DC coefficient is encoded as) and then get the next n number of bits (stored in two's complement)
-                    diff_cat = (self.huff_tables[0])[self.color_components[component_id].ht_dc_id].get_code(self.bitstream)
-                    diff_encoded = self.bitstream.get(diff_cat)
-                    diff = 
+                    diff_cat = int((self.huff_tables[0])[self.color_components[component_id].ht_dc_id].get_code(self.bitstream))
+                    diff = self.bitstream.get_value_from_bits(diff_cat)
                     curr_dc[component_id] += diff
                     ((self.mcus[y])[x].jpeg_color[component_id])[0][0] = curr_dc[component_id]
                     
                     # Read the next n elements (up to 63) using the AC huffman table (figure F.13 on the )
                     flag = False
-                    idx = 0
+                    idx = 1
                     while idx < 64 and not flag:
-                        value = (self.huff_tables[1])[self.color_components[component_id].ht_ac_id].get_code(self.bitstream)
+                        value = int((self.huff_tables[1])[self.color_components[component_id].ht_ac_id].get_code(self.bitstream))
                         if value != 0:
                             # Get the number of zeros and that preceded it and move the index up by that amount
                             # The number of zeros is the 4 upper bits of value
-                            n_zeros = value >> 4
+                            n_zeros = (value & 0xf0) >> 4
                             idx += n_zeros
                             
                             # The lower 4 bits gets the "category" of the AC coefficient. Read the next "ac_cat" bits after
                             # to get the huffman encoded AC coefficient
                             ac_cat = value & 0x0f
-                            ac_encoded = self.bitstream(ac_cat)
+                            ac = self.bitstream.get_value_from_bits(ac_cat)
                             
                             ((self.mcus[y])[x].jpeg_color[component_id])[self.zig_zag[idx] // 8][self.zig_zag[idx] % 8] = ac
                         else:
-                            flag = True                        
-                        idx += 1
-                    ...
-                #'''
-                ...
-                
+                            flag = True
+                        #idx += 1
+                #print(curr_dc)
+
+        # Dequantization on the mcus
+        for y in range((self.image_height + 8 - 1) // 8):
+            for x in range((self.image_width + 8 - 1) // 8):
+                for component_id in range(3):
+                        
+                    (self.mcus[y])[x].jpeg_color[component_id] *= self.quant_tables[self.color_components[component_id].qt_id]
         
+                    '''if x <= 3 and y == 0:
+                        print((self.mcus[y])[x].jpeg_color[component_id])
+                        print("===============================================================")'''
+        
+        print("\n\n\n\n")
+        import scipy
+        
+        # IDCT on the MCUs
+        for y in range((self.image_height + 8 - 1) // 8):
+            for x in range((self.image_width + 8 - 1) // 8):
+                for component_id in range(3):
+                    (self.mcus[y])[x].jpeg_color[component_id] = jidct2((self.mcus[y])[x].jpeg_color[component_id])
+                    (self.mcus[y])[x].jpeg_color[component_id] = jidct2((self.mcus[y])[x].jpeg_color[component_id].T)
+                    
+        # Convert to RBG
+        for y in range((self.image_height + 8 - 1) // 8):
+            for x in range((self.image_width + 8 - 1) // 8):
+                (self.mcus[y])[x].rgb[0] = (self.mcus[y])[x].jpeg_color[0] + 128 + 1.402 * ((self.mcus[y])[x].jpeg_color[2])
+                (self.mcus[y])[x].rgb[1] = (self.mcus[y])[x].jpeg_color[0] + 128 - 0.344136 * ((self.mcus[y])[x].jpeg_color[1]) - 0.714136 * ((self.mcus[y])[x].jpeg_color[2])
+                (self.mcus[y])[x].rgb[2] = (self.mcus[y])[x].jpeg_color[0] + 128 + 1.772 * ((self.mcus[y])[x].jpeg_color[1])
+                                
+                (self.mcus[y])[x].rgb[0] = np.round((self.mcus[y])[x].rgb[0])
+                (self.mcus[y])[x].rgb[1] = np.round((self.mcus[y])[x].rgb[1])
+                (self.mcus[y])[x].rgb[2] = np.round((self.mcus[y])[x].rgb[2])
+                
+                if x <= 3 and y == 0:
+                    for i in range(3):
+                        print((self.mcus[y])[x].rgb[i])
+                        print(type((self.mcus[y])[x].rgb[i].dtype))
+                        print("===============================================================")
+                    print("===============================================================")
+
+                
+        # Put the rgb values into a numpy matrix to display it
+        shape = (self.image_height, self.image_width, 3)
+        rgb_array = np.zeros(shape)
+        for y in range((self.image_height + 8 - 1) // 8):
+            for x in range((self.image_width + 8 - 1) // 8):
+                mcu = (self.mcus[y])[x]
+                for i in range(8):
+                    for j in range(8):
+                        curr_y = y * 8 + i
+                        curr_x = x * 8 + j
+                        rgb_array[curr_y][curr_x][0] = mcu.rgb[0][i][j]
+                        rgb_array[curr_y][curr_x][1] = mcu.rgb[1][i][j]
+                        rgb_array[curr_y][curr_x][2] = mcu.rgb[2][i][j]                    
+                        ...
+        rgb_array = rgb_array.astype(np.uint8)
+        import matplotlib.pyplot as plt
+        plt.imshow(rgb_array)
+        plt.axis('off')
+        plt.show()
+
     def read_SOS_segment(self):
         length, number_of_components = struct.unpack(">HB", self.jpeg_file[self.idx : self.idx + 3])
         print("length: ", length)
@@ -174,7 +226,7 @@ class JPG_IMAGE_DECODER:
         
         # This is the crucial part to decode. This bitstream is sent to the huffman decoder and continually sends
         # the next bit over whenever the huffman decoder (or any decoder) requests it.
-        self.bitstream = BitStream(self.jpeg_file[self.idx : end_idx - 1])
+        self.bitstream = BitStream(self.jpeg_file[self.idx : end_idx])
         
         # Update the current index to be right before the end of image marker
         self.idx = end_idx - 1
@@ -253,28 +305,24 @@ class JPG_IMAGE_DECODER:
             (self.huff_tables[ht_type])[ht_destination_id] = Huffman(number_of_symbols_per_length, symbols)
             
         '''
-        for key, value in self.huff_tables.items():
+        for key, value in self.huff_tables[0].items():
             print(f"{key} : {value}")
-            ...
+
+        for key, value in self.huff_tables[1].items():
+            print(f"{key} : {value}")
         #'''
 
     def read_quantization_table(self):
         quant_length = struct.unpack(">H", self.jpeg_file[self.idx : self.idx+2])[0]
         quant_length -= 2
         self.idx += 2
-        
-        #print("length: ", quant_length)
-        
+                
         while quant_length > 0:
             table_info = struct.unpack(">B", self.jpeg_file[self.idx : self.idx+1])[0]
             precision = table_info & 0xf0
             qt_destination_id = table_info & 0x0f
             quant_length -= 1
             self.idx += 1
-            
-            #print("table_info: ", bytes(table_info))
-            #print("precision: ", precision)
-            #print("destination: ", qt_destination_id)
             
             quant_table = np.zeros(64)
             
@@ -291,8 +339,6 @@ class JPG_IMAGE_DECODER:
                     ...
             quant_table = quant_table.reshape((8, 8))
             self.quant_tables[qt_destination_id] = quant_table
-            # print(quant_table)
-
 
 def main():
     bytestr = JPG_IMAGE_DECODER('jpeg444.jpg')
@@ -301,6 +347,4 @@ def main():
     if bytestr.jpeg_file[0] == 0xff and bytestr.jpeg_file[1] == 0xd8:
         print("Is a jpeg file")
     
-    # read_quant_table(bytestr)
-
 main()

@@ -6,11 +6,5 @@ import numpy as np
 
 @dataclass
 class MCU:
-    Y: np.ndarray = field(default_factory=lambda: np.zeros((8, 8)))
-    Cr: np.ndarray = field(default_factory=lambda: np.zeros((8, 8)))
-    Cb: np.ndarray = field(default_factory=lambda: np.zeros((8, 8)))
-    R: np.ndarray = field(default_factory=lambda: np.zeros((8, 8)))
-    G: np.ndarray = field(default_factory=lambda: np.zeros((8, 8)))
-    B: np.ndarray = field(default_factory=lambda: np.zeros((8, 8)))
-    
     jpeg_color: list[np.ndarray] = field(default_factory=lambda: [np.zeros((8, 8)) for i in range(3)])
+    rgb: list[np.ndarray] = field(default_factory=lambda: [np.zeros((8, 8)) for i in range(3)])

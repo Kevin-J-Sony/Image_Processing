@@ -133,8 +133,7 @@ class JPG_IMAGE_DECODER:
         # Dequantization on the mcus
         for y in range((self.image_height + 8 - 1) // 8):
             for x in range((self.image_width + 8 - 1) // 8):
-                for component_id in range(3):
-                        
+                for component_id in range(3):    
                     (self.mcus[y])[x].jpeg_color[component_id] *= self.quant_tables[self.color_components[component_id].qt_id]
         
                     '''if x <= 3 and y == 0:
@@ -150,25 +149,19 @@ class JPG_IMAGE_DECODER:
                 for component_id in range(3):
                     (self.mcus[y])[x].jpeg_color[component_id] = jidct2((self.mcus[y])[x].jpeg_color[component_id])
                     (self.mcus[y])[x].jpeg_color[component_id] = jidct2((self.mcus[y])[x].jpeg_color[component_id].T)
+                    (self.mcus[y])[x].jpeg_color[component_id] += 128
                     
         # Convert to RBG
         for y in range((self.image_height + 8 - 1) // 8):
             for x in range((self.image_width + 8 - 1) // 8):
-                (self.mcus[y])[x].rgb[0] = (self.mcus[y])[x].jpeg_color[0] + 128 + 1.402 * ((self.mcus[y])[x].jpeg_color[2])
-                (self.mcus[y])[x].rgb[1] = (self.mcus[y])[x].jpeg_color[0] + 128 - 0.344136 * ((self.mcus[y])[x].jpeg_color[1]) - 0.714136 * ((self.mcus[y])[x].jpeg_color[2])
-                (self.mcus[y])[x].rgb[2] = (self.mcus[y])[x].jpeg_color[0] + 128 + 1.772 * ((self.mcus[y])[x].jpeg_color[1])
+                (self.mcus[y])[x].rgb[0] = (self.mcus[y])[x].jpeg_color[0] + 1.402 * ((self.mcus[y])[x].jpeg_color[2] - 128)
+                (self.mcus[y])[x].rgb[1] = (self.mcus[y])[x].jpeg_color[0] - 0.344136 * ((self.mcus[y])[x].jpeg_color[1] - 128) - 0.714136 * ((self.mcus[y])[x].jpeg_color[2] - 128)
+                (self.mcus[y])[x].rgb[2] = (self.mcus[y])[x].jpeg_color[0] + 1.772 * ((self.mcus[y])[x].jpeg_color[1] - 128)
                                 
                 (self.mcus[y])[x].rgb[0] = np.round((self.mcus[y])[x].rgb[0])
                 (self.mcus[y])[x].rgb[1] = np.round((self.mcus[y])[x].rgb[1])
                 (self.mcus[y])[x].rgb[2] = np.round((self.mcus[y])[x].rgb[2])
                 
-                if x <= 3 and y == 0:
-                    for i in range(3):
-                        print((self.mcus[y])[x].rgb[i])
-                        print(type((self.mcus[y])[x].rgb[i].dtype))
-                        print("===============================================================")
-                    print("===============================================================")
-
                 
         # Put the rgb values into a numpy matrix to display it
         shape = (self.image_height, self.image_width, 3)
@@ -184,11 +177,43 @@ class JPG_IMAGE_DECODER:
                         rgb_array[curr_y][curr_x][1] = mcu.rgb[1][i][j]
                         rgb_array[curr_y][curr_x][2] = mcu.rgb[2][i][j]                    
                         ...
-        rgb_array = rgb_array.astype(np.uint8)
+        rgb_array = rgb_array.astype(np.int32)
+        
         import matplotlib.pyplot as plt
+
+        fig = plt.figure()
+        fig.add_subplot(2, 2, 1)
         plt.imshow(rgb_array)
         plt.axis('off')
+        
+        fig.add_subplot(2, 2, 2)
+        import cv2
+
+        image = cv2.imread("jpeg444.jpg")
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+        plt.imshow(image)
+        plt.axis('off')
+
+        fig.add_subplot(2, 2, 3)
+        plt.imshow(rgb_array - image)
+        plt.axis('off')
+
+        fig.add_subplot(2, 2, 4)
+        plt.imshow(image - rgb_array)
+        plt.axis('off')
         plt.show()
+        
+        '''
+        for pixel1, pixel2 in zip(image.flatten(), rgb_array.flatten()):
+            print(pixel1, '\t\t', pixel2)
+        '''
+        for i in range(len(image)):
+            for j in range(len(image[i])):
+                print(image[i][j], '\t\t', rgb_array[i][j])
+        
+        
+
 
     def read_SOS_segment(self):
         length, number_of_components = struct.unpack(">HB", self.jpeg_file[self.idx : self.idx + 3])
